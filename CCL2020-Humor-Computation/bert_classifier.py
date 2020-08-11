@@ -22,6 +22,8 @@ import collections
 import csv
 import os
 import sys
+import math
+from random import sample
 
 sys.path.append("../")
 from bert import modeling
@@ -201,6 +203,7 @@ class DataProcessor(object):
         """Reads a tab separated value file."""
         with tf.gfile.Open(input_file, "r") as f:
             # reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+            # 以逗号作为分隔符
             reader = csv.reader(f, delimiter=",", quotechar=quotechar)
             lines = []
             for line in reader:
@@ -213,38 +216,17 @@ class HumorCompProcessor(DataProcessor):
 
     def __init__(self):
         self.language = "zh"
+        self.dev_indexs = []
+        # 验证集所占比例
+        self.split_rate = 0.2
 
     def get_train_examples(self, data_dir):
         """Gets a collection of `InputExample`s for the train set."""
-        lines = self._read_tsv(
-            os.path.join(data_dir, "cn_train.csv"))
-        examples = []
-        for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            if i > 10000:
-                break
-            guid = "train-%d" % (i)
-            text_a = tokenization.convert_to_unicode(line[4])
-            label = tokenization.convert_to_unicode(line[5])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-        return examples
+        return self._create_exaples(self._read_tsv(os.path.join(data_dir, "cn_train.csv")), "train")
 
     def get_dev_examples(self, data_dir):
         """Gets a collection of `InputExample`s for the dev set."""
-        lines = self._read_tsv(
-            os.path.join(data_dir, "cn_train.csv"))
-        examples = []
-        for (i, line) in enumerate(lines):
-            if i < 10000:
-                continue
-            guid = "dev-%d" % (i)
-            text_a = tokenization.convert_to_unicode(line[4])
-            label = tokenization.convert_to_unicode(line[5])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-        return examples
+        return self._create_exaples(self._read_tsv(os.path.join(data_dir, "cn_train.csv")), "dev")
 
     def get_test_examples(self, data_dir):
         """Gets a collection of `InputExample`s for prediction."""
@@ -254,174 +236,30 @@ class HumorCompProcessor(DataProcessor):
         """Gets the list of labels for this data set."""
         return ["0", "1"]
 
-
-class XnliProcessor(DataProcessor):
-    """Processor for the XNLI data set."""
-
-    def __init__(self):
-        self.language = "zh"
-
-    def get_train_examples(self, data_dir):
-        """See base class."""
-        lines = self._read_tsv(
-            os.path.join(data_dir, "multinli",
-                         "multinli.train.%s.tsv" % self.language))
+    def _create_exaples(self, lines, set_type):
+        num_dialogue = int(lines[-1][1])
+        num_dev_dialogue = math.floor(num_dialogue * self.split_rate)
+        # num_train_dialogue = num_dialogue - num_dev_dialogue
+        if self.dev_indexs is not None:
+            self.dev_indexs = sample(range(num_dialogue), num_dev_dialogue)
         examples = []
         for (i, line) in enumerate(lines):
             if i == 0:
+                # 第一行为列标题，忽略
                 continue
-            guid = "train-%d" % (i)
-            text_a = tokenization.convert_to_unicode(line[0])
-            text_b = tokenization.convert_to_unicode(line[1])
-            label = tokenization.convert_to_unicode(line[2])
-            if label == tokenization.convert_to_unicode("contradictory"):
-                label = tokenization.convert_to_unicode("contradiction")
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        return examples
+            if set_type == "dev" and int(line[1]) in self.dev_indexs:
+                guid = "%s-%d" % (set_type, i)
+                text_a = tokenization.convert_to_unicode(line[4])
+                label = tokenization.convert_to_unicode(line[5])
+                examples.append(
+                    InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "train" and int(line[1]) not in self.dev_indexs:
+                guid = "%s-%d" % (set_type, i)
+                text_a = tokenization.convert_to_unicode(line[4])
+                label = tokenization.convert_to_unicode(line[5])
+                examples.append(
+                    InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        lines = self._read_tsv(os.path.join(data_dir, "xnli.dev.tsv"))
-        examples = []
-        for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            guid = "dev-%d" % (i)
-            language = tokenization.convert_to_unicode(line[0])
-            if language != tokenization.convert_to_unicode(self.language):
-                continue
-            text_a = tokenization.convert_to_unicode(line[6])
-            text_b = tokenization.convert_to_unicode(line[7])
-            label = tokenization.convert_to_unicode(line[1])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        return examples
-
-    def get_labels(self):
-        """See base class."""
-        return ["contradiction", "entailment", "neutral"]
-
-
-class MnliProcessor(DataProcessor):
-    """Processor for the MultiNLI data set (GLUE version)."""
-
-    def get_train_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "dev_matched.tsv")),
-            "dev_matched")
-
-    def get_test_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "test_matched.tsv")), "test")
-
-    def get_labels(self):
-        """See base class."""
-        return ["contradiction", "entailment", "neutral"]
-
-    def _create_examples(self, lines, set_type):
-        """Creates examples for the training and dev sets."""
-        examples = []
-        for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
-            text_a = tokenization.convert_to_unicode(line[8])
-            text_b = tokenization.convert_to_unicode(line[9])
-            if set_type == "test":
-                label = "contradiction"
-            else:
-                label = tokenization.convert_to_unicode(line[-1])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        return examples
-
-
-class MrpcProcessor(DataProcessor):
-    """Processor for the MRPC data set (GLUE version)."""
-
-    def get_train_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
-
-    def get_test_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
-
-    def get_labels(self):
-        """See base class."""
-        return ["0", "1"]
-
-    def _create_examples(self, lines, set_type):
-        """Creates examples for the training and dev sets."""
-        examples = []
-        for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            guid = "%s-%s" % (set_type, i)
-            text_a = tokenization.convert_to_unicode(line[3])
-            text_b = tokenization.convert_to_unicode(line[4])
-            if set_type == "test":
-                label = "0"
-            else:
-                label = tokenization.convert_to_unicode(line[0])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        return examples
-
-
-class ColaProcessor(DataProcessor):
-    """Processor for the CoLA data set (GLUE version)."""
-
-    def get_train_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
-
-    def get_test_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
-
-    def get_labels(self):
-        """See base class."""
-        return ["0", "1"]
-
-    def _create_examples(self, lines, set_type):
-        """Creates examples for the training and dev sets."""
-        examples = []
-        for (i, line) in enumerate(lines):
-            # Only the test set has a header
-            if set_type == "test" and i == 0:
-                continue
-            guid = "%s-%s" % (set_type, i)
-            if set_type == "test":
-                text_a = tokenization.convert_to_unicode(line[1])
-                label = "0"
-            else:
-                text_a = tokenization.convert_to_unicode(line[3])
-                label = tokenization.convert_to_unicode(line[1])
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
         return examples
 
 
@@ -849,10 +687,6 @@ def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     processors = {
-        "cola": ColaProcessor,
-        "mnli": MnliProcessor,
-        "mrpc": MrpcProcessor,
-        "xnli": XnliProcessor,
         "humor": HumorCompProcessor,
     }
 

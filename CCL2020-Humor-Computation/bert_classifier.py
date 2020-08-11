@@ -737,13 +737,17 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 accuracy = tf.metrics.accuracy(
                     labels=label_ids, predictions=predictions, weights=is_real_example)
                 loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
-                FN = tf.metrics.false_negatives(labels=label_ids, predictions=predictions)
-                FP = tf.metrics.false_positives(labels=label_ids, predictions=predictions)
-                TN = tf.metrics.true_negatives(labels=label_ids, predictions=predictions)
-                TP = tf.metrics.true_positives(labels=label_ids, predictions=predictions)
-                precision = TP / (FP + TP)
-                recall = TP / (FN + TP)
-                f1 = 2 * (precision * recall) / (precision + recall)
+                # FN = tf.metrics.false_negatives(labels=label_ids, predictions=predictions)
+                # FP = tf.metrics.false_positives(labels=label_ids, predictions=predictions)
+                # TN = tf.metrics.true_negatives(labels=label_ids, predictions=predictions)
+                # TP = tf.metrics.true_positives(labels=label_ids, predictions=predictions)
+                # precision = TP / (FP + TP)
+                # recall = TP / (FN + TP)
+                precision = tf.metrics.precision(labels=label_ids, predictions=predictions)
+                recall = tf.metrics.recall(labels=label_ids, predictions=predictions)
+                # f1 = 2 * (precision * recall) / (precision + recall)
+                f1 = tf.metrics.mean((2 * (precision[1] * recall[1]) / (precision[1] + recall[1])))
+
                 return {
                     "eval_accuracy": accuracy,
                     "eval_loss": loss,

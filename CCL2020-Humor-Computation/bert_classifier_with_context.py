@@ -288,6 +288,8 @@ class HumorCompProcessor(DataProcessor):
                     left_size -= left_size
                     left -= 1
                     break
+            else:
+                break
         if right_size > 0:
             while True:
                 if right == max_index:
@@ -303,6 +305,8 @@ class HumorCompProcessor(DataProcessor):
                         right_size -= right_size
                         right += 1
                         break
+                else:
+                    break
 
         return ''.join(text_b_list)
 

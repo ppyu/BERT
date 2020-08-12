@@ -277,13 +277,14 @@ class HumorCompProcessor(DataProcessor):
         while True:
             if left == 0:
                 break
-            if lines[left][1] == dialogue_id:
-                if len(lines[left]) < left_size:
-                    text_b_list.insert(0, lines[left])
-                    left_size -= len(lines[left])
+            line = lines[left]
+            if line[1] == dialogue_id:
+                if len(line[4]) < left_size:
+                    text_b_list.insert(0, line[4])
+                    left_size -= len(line[4])
                     left -= 1
                 else:
-                    text_b_list.insert(0, lines[left][-left_size:])
+                    text_b_list.insert(0, line[4][-left_size:])
                     left_size -= left_size
                     left -= 1
                     break
@@ -291,13 +292,14 @@ class HumorCompProcessor(DataProcessor):
             while True:
                 if right == max_index:
                     break
-                if lines[right][1] == dialogue_id:
-                    if len(lines[right]) < right_size:
-                        text_b_list.append(lines[right])
-                        right_size -= len(lines[right])
+                line = lines[right]
+                if line[1] == dialogue_id:
+                    if len(line[4]) < right_size:
+                        text_b_list.append(line[4])
+                        right_size -= len(line[4])
                         right += 1
                     else:
-                        text_b_list.append(lines[right][:right_size])
+                        text_b_list.append(line[4][:right_size])
                         right_size -= right_size
                         right += 1
                         break

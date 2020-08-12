@@ -257,6 +257,7 @@ class HumorCompProcessor(DataProcessor):
                 guid = "%s-%d" % (set_type, i)
                 text_a = tokenization.convert_to_unicode(line[4])
                 text_b = None
+                text_b_len = FLAGS.max_seq_length - 3 - len(text_a)
                 if text_b_len > 0:
                     text_b = tokenization.convert_to_unicode(
                         self._get_text_b(text_b_len, dialogue_id, i, lines))

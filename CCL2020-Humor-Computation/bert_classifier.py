@@ -584,14 +584,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 precision = tf.metrics.precision(labels=label_ids, predictions=predictions)
                 recall = tf.metrics.recall(labels=label_ids, predictions=predictions)
                 # f1 = 2 * (precision * recall) / (precision + recall)
-                f1 = tf.metrics.mean((2 * (precision[1] * recall[1]) / (precision[1] + recall[1])))
+                # f1 = tf.metrics.mean((2 * (precision[1] * recall[1]) / (precision[1] + recall[1])))
 
                 return {
                     "eval_accuracy": accuracy,
                     "eval_loss": loss,
                     "precision": precision,
                     "recall": recall,
-                    "f1": f1
+                    # "f1": f1
                 }
 
             eval_metrics = (metric_fn,
@@ -822,8 +822,16 @@ def main(_):
         with tf.gfile.GFile(output_eval_file, "w") as writer:
             tf.logging.info("***** Eval results *****")
             for key in sorted(result.keys()):
+                if key == "precision":
+                    precision = result[key]
+                if key == "recall":
+                    recall = result[key]
                 tf.logging.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
+            # 计算并打印f1值，并输出到文件中
+            f1 = 2 * (precision * recall) / (precision + recall)
+            tf.logging.info("  %s = %s", "f1", str(f1))
+            writer.write("%s = %s\n" % ("f1", str(f1)))
 
     if FLAGS.do_predict:
         predict_examples = processor.get_test_examples(FLAGS.data_dir)

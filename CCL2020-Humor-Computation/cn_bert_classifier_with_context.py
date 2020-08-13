@@ -234,7 +234,7 @@ class HumorCompProcessor(DataProcessor):
         num_dialogue = int(lines[-1][1])
         num_dev_dialogue = math.floor(num_dialogue * self.split_rate)
         # num_train_dialogue = num_dialogue - num_dev_dialogue
-        if self.dev_indexs is not None:
+        if not self.dev_indexs:
             self.dev_indexs = sample(range(num_dialogue), num_dev_dialogue)
         examples = []
         for (i, line) in enumerate(lines):

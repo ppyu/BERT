@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-@File   : bert_classifier_with_context.py
+@File   : cn_bert_classifier_with_context.py
 @Author : Pengy
 @Date   : 2020/8/12
 @Description : Input your description here ... 
@@ -224,7 +224,7 @@ class HumorCompProcessor(DataProcessor):
 
     def get_test_examples(self, data_dir):
         """Gets a collection of `InputExample`s for prediction."""
-        raise NotImplementedError()
+        return self._create_exaples(self._read_tsv(os.path.join(data_dir, "cn_dev.csv")), "test")
 
     def get_labels(self):
         """Gets the list of labels for this data set."""
@@ -242,7 +242,9 @@ class HumorCompProcessor(DataProcessor):
                 # 第一行为列标题，忽略
                 continue
             dialogue_id = line[1]
-            if set_type == "dev" and int(dialogue_id) in self.dev_indexs:
+            if (set_type == "dev" and int(dialogue_id) in self.dev_indexs) \
+                    or (set_type == "train" and int(dialogue_id) not in self.dev_indexs) \
+                    or (set_type == "test"):
                 guid = "%s-%d" % (set_type, i)
                 text_a = tokenization.convert_to_unicode(line[4])
                 text_b = None
@@ -250,18 +252,10 @@ class HumorCompProcessor(DataProcessor):
                 if text_b_len > 0:
                     text_b = tokenization.convert_to_unicode(
                         self._get_text_b(text_b_len, dialogue_id, i, lines))
-                label = tokenization.convert_to_unicode(line[5])
-                examples.append(
-                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-            elif set_type == "train" and int(dialogue_id) not in self.dev_indexs:
-                guid = "%s-%d" % (set_type, i)
-                text_a = tokenization.convert_to_unicode(line[4])
-                text_b = None
-                text_b_len = FLAGS.max_seq_length - 3 - len(text_a)
-                if text_b_len > 0:
-                    text_b = tokenization.convert_to_unicode(
-                        self._get_text_b(text_b_len, dialogue_id, i, lines))
-                label = tokenization.convert_to_unicode(line[5])
+                if set_type == "test":
+                    label = "0"
+                else:
+                    label = tokenization.convert_to_unicode(line[5])
                 examples.append(
                     InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
 

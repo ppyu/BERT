@@ -220,7 +220,7 @@ class HumorCompProcessor(DataProcessor):
 
     def get_dev_examples(self, data_dir):
         """Gets a collection of `InputExample`s for the dev set."""
-        return self._create_exaples(self._read_tsv(os.path.join(data_dir, "en_dev.csv")), "dev")
+        return self._create_exaples(self._read_tsv(os.path.join(data_dir, "en_train.csv")), "dev")
 
     def get_test_examples(self, data_dir):
         """Gets a collection of `InputExample`s for prediction."""
